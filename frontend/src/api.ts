@@ -56,7 +56,11 @@ export class ApiError extends Error {
   }
 }
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+const apiBase = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8080' : '')).replace(/\/$/, '')
+
+export function apiAssetUrl(url?: string) {
+  return url ? new URL(url, apiBase || window.location.origin).toString() : undefined
+}
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const user = auth?.currentUser
