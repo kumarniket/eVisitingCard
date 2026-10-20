@@ -1,0 +1,45 @@
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+
+spring:
+  config:
+    import: optional:file:./application-local.properties
+  application:
+    name: e-cardmitra-visiting-card-api
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    default-property-inclusion: non_null
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
+    project-id: ${GOOGLE_CLOUD_PROJECT:}
+  drive:
+    enabled: ${DRIVE_ENABLED:false}
+    folder-id: ${DRIVE_LOGO_FOLDER_ID:}
+    credentials-file: ${GOOGLE_DRIVE_CREDENTIALS:}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}

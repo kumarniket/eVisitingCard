@@ -1,0 +1,11 @@
+services:
+  backend:
+    environment:
+      FIREBASE_ENABLED: "true"
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:?Set GOOGLE_CLOUD_PROJECT to your Firebase project ID}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-adc.json
+    volumes:
+      - type: bind
+        source: ${GOOGLE_APPLICATION_CREDENTIALS:?Set GOOGLE_APPLICATION_CREDENTIALS to the host ADC file path}
+        target: /run/secrets/google-adc.json
+        read_only: true

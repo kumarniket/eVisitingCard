@@ -1,0 +1,14 @@
+services:
+  backend:
+    environment:
+      DRIVE_ENABLED: "true"
+      GOOGLE_DRIVE_CREDENTIALS: /run/secrets/google-drive-user-adc.json
+    volumes:
+      - type: bind
+        source: ${DRIVE_CONFIG_FILE:-./backend/application-local.properties}
+        target: /app/application-local.properties
+        read_only: true
+      - type: bind
+        source: ${GOOGLE_DRIVE_CREDENTIALS:?Set GOOGLE_DRIVE_CREDENTIALS to the admin user's local Drive OAuth credentials file}
+        target: /run/secrets/google-drive-user-adc.json
+        read_only: true
