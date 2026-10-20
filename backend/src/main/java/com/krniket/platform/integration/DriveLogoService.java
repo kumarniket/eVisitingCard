@@ -3,8 +3,10 @@ package com.krniket.platform.integration;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import com.google.api.services.drive.model.FileList;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -61,6 +63,32 @@ public class DriveLogoService {
         } catch (IOException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The assigned logo could not be retrieved from Google Drive.", exception);
         }
+    }
+
+    public void deleteSuperseded(String slug, String keepFileId) {
+        if (folderId.isBlank()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "The administrator Drive folder is not configured.");
+        try {
+            String query = "'" + folderId + "' in parents and name = '" + slug + "-logo' and trashed = false";
+            String pageToken = null;
+            List<String> fileIds = new ArrayList<>();
+            do {
+                FileList files = drive().files().list()
+                        .setQ(query)
+                        .setFields("nextPageToken,files(id)")
+                        .setPageSize(1000)
+                        .setPageToken(pageToken)
+                        .execute();
+                if (files.getFiles() != null) files.getFiles().stream().map(File::getId).forEach(fileIds::add);
+                pageToken = files.getNextPageToken();
+            } while (pageToken != null);
+            for (String fileId : supersededFileIds(fileIds, keepFileId)) drive().files().delete(fileId).execute();
+        } catch (IOException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Superseded shop logos could not be removed from Google Drive.", exception);
+        }
+    }
+
+    static List<String> supersededFileIds(List<String> fileIds, String keepFileId) {
+        return fileIds.stream().filter(fileId -> !fileId.equals(keepFileId)).toList();
     }
 
     private byte[] validate(MultipartFile upload) {

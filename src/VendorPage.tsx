@@ -103,7 +103,9 @@ function ShopWorkspace({ shop, onShopChange, message, setMessage }: { shop: Shop
     try {
       const updated = await apiRequest<Shop>('/api/v1/shops/me/logo', { method: 'POST', body: form })
       onShopChange(updated)
-      setLogoMessage('Shop logo uploaded successfully.')
+      setLogoMessage(updated.logoCleanupWarning
+        ? 'Logo replaced, but older copies could not be removed from Drive.'
+        : 'Shop logo uploaded successfully.')
     } catch (error) {
       setLogoUploadFailed(true)
       setLogoMessage(error instanceof Error ? error.message : 'Could not upload the shop logo.')

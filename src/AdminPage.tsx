@@ -4,7 +4,7 @@ import { apiRequest, type PageResponse } from './api'
 import type { User } from '@firebase/auth'
 
 type Vendor = { uid: string; displayName?: string; email?: string; approvalStatus: string }
-type ShopSubmission = { id: string; name: string; category: string; city?: string; ownerUid: string; approvalStatus: string; approved: boolean; published: boolean; logoUrl?: string }
+type ShopSubmission = { id: string; name: string; category: string; city?: string; ownerUid: string; approvalStatus: string; approved: boolean; published: boolean; logoUrl?: string; logoCleanupWarning?: boolean }
 type Props = { user: User | null; authReady: boolean; onSignIn: () => void }
 const adminEmail = 'niket2work@gmail.com'
 
@@ -74,8 +74,10 @@ export default function AdminPage({ user, authReady, onSignIn }: Props) {
     setLogoUploadFailed(false)
     setLogoMessage('Uploading logo...')
     try {
-      await apiRequest(`/api/v1/admin/shops/${encodeURIComponent(shopId)}/logo`, { method: 'POST', body: form })
-      setLogoMessage('Logo uploaded successfully.')
+      const updated = await apiRequest<ShopSubmission>(`/api/v1/admin/shops/${encodeURIComponent(shopId)}/logo`, { method: 'POST', body: form })
+      setLogoMessage(updated.logoCleanupWarning
+        ? 'Logo replaced, but older copies could not be removed from Drive.'
+        : 'Logo uploaded successfully.')
       try {
         await refresh()
       } catch (reason) {
@@ -93,8 +95,12 @@ export default function AdminPage({ user, authReady, onSignIn }: Props) {
   async function removeLogo(shopId: string) {
     setWorking(shopId)
     try {
-      await apiRequest(`/api/v1/admin/shops/${encodeURIComponent(shopId)}/logo`, { method: 'DELETE' })
+      const updated = await apiRequest<ShopSubmission>(`/api/v1/admin/shops/${encodeURIComponent(shopId)}/logo`, { method: 'DELETE' })
       await refresh()
+      setLogoUploadFailed(updated.logoCleanupWarning === true)
+      setLogoMessage(updated.logoCleanupWarning
+        ? 'Logo removed, but older copies could not be removed from Drive.'
+        : 'Logo removed successfully.')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The logo assignment could not be removed.')
     } finally {

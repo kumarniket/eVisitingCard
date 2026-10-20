@@ -13,6 +13,7 @@ export type Shop = {
   website?: string
   coverUrl?: string
   logoUrl?: string
+  logoCleanupWarning?: boolean
   published: boolean
   approved: boolean
   approvalStatus?: string

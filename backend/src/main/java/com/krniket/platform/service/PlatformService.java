@@ -11,6 +11,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -360,7 +362,10 @@ public class PlatformService {
         Object fileId = source.get("logoFileId");
         Object slug = source.get("slug");
         if (fileId instanceof String id && !id.isBlank() && slug instanceof String shopSlug && !shopSlug.isBlank()) {
-            result.put("logoUrl", logoUrl(shopSlug));
+            Object updatedAt = source.get("updatedAt");
+            String version = updatedAt instanceof String value && !value.isBlank()
+                    ? "?v=" + URLEncoder.encode(value, StandardCharsets.UTF_8) : "";
+            result.put("logoUrl", logoUrl(shopSlug) + version);
         }
         return result;
     }

@@ -7,8 +7,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1")
 @Validated
 public class PlatformController {
+    private static final Logger logger = LoggerFactory.getLogger(PlatformController.class);
     private final PlatformService platform;
     private final DriveLogoService logos;
 
@@ -79,7 +84,8 @@ public class PlatformController {
         VerifiedUser user = actor(authentication);
         Map<String, Object> shop = platform.myShop(user);
         DriveLogoService.Upload upload = logos.upload((String) shop.get("slug"), file);
-        return platform.setMyShopLogo(user, upload.fileId());
+        Map<String, Object> updated = platform.setMyShopLogo(user, upload.fileId());
+        return cleanupSupersededLogos(shop, upload.fileId(), updated);
     }
 
     @GetMapping("/shops/me/status")
@@ -145,7 +151,7 @@ public class PlatformController {
     @GetMapping("/public/shops/{slug}/logo")
     public ResponseEntity<byte[]> publicLogo(@PathVariable String slug) {
         DriveLogoService.Download download = logos.download(platform.publicLogoFileId(slug));
-        return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
+        return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store")
                 .contentType(MediaType.parseMediaType(download.contentType())).body(download.bytes());
     }
 
@@ -204,12 +210,17 @@ public class PlatformController {
     public Map<String, Object> assignLogo(@PathVariable String shopId, @RequestPart("file") MultipartFile file) {
         Map<String, Object> shop = platform.shopById(shopId);
         DriveLogoService.Upload upload = logos.upload((String) shop.get("slug"), file);
-        return platform.setShopLogo(shopId, upload.fileId());
+        Map<String, Object> updated = platform.setShopLogo(shopId, upload.fileId());
+        return cleanupSupersededLogos(shop, upload.fileId(), updated);
     }
 
     @DeleteMapping("/admin/shops/{shopId}/logo")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public Map<String, Object> removeLogo(@PathVariable String shopId) { return platform.removeShopLogo(shopId); }
+    public Map<String, Object> removeLogo(@PathVariable String shopId) {
+        Map<String, Object> shop = platform.shopById(shopId);
+        Map<String, Object> updated = platform.removeShopLogo(shopId);
+        return cleanupSupersededLogos(shop, null, updated);
+    }
 
     @GetMapping("/admin/dashboard")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -217,5 +228,19 @@ public class PlatformController {
 
     private VerifiedUser actor(Authentication authentication) {
         return (VerifiedUser) authentication.getPrincipal();
+    }
+
+    private Map<String, Object> cleanupSupersededLogos(Map<String, Object> shop, String keepFileId,
+            Map<String, Object> updated) {
+        String slug = (String) shop.get("slug");
+        try {
+            logos.deleteSuperseded(slug, keepFileId);
+            return updated;
+        } catch (ResponseStatusException exception) {
+            logger.warn("logo_cleanup_failed shopId={} slug={}", shop.get("id"), slug, exception);
+            Map<String, Object> response = new LinkedHashMap<>(updated);
+            response.put("logoCleanupWarning", true);
+            return response;
+        }
     }
 }

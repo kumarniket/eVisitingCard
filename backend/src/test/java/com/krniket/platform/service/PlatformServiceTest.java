@@ -3,6 +3,7 @@ package com.krniket.platform.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.krniket.platform.data.FirestoreStore;
 import com.krniket.platform.security.VerifiedUser;
 import java.util.ArrayList;
@@ -98,7 +99,7 @@ class PlatformServiceTest {
         Map<String, Object> updated = service.setMyShopLogo(vendor, "file-a");
 
         assertEquals("file-a", updated.get("logoFileId"));
-        assertEquals("/api/v1/public/shops/shop-a/logo", updated.get("logoUrl"));
+        assertTrue(updated.get("logoUrl").toString().matches("/api/v1/public/shops/shop-a/logo\\?v=.+"));
         assertThrows(ResponseStatusException.class,
                 () -> service.setMyShopLogo(new VerifiedUser("vendor-b", null, null, false), "file-b"));
     }
