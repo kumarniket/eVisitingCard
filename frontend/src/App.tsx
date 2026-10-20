@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type User } from '@firebase/auth'
 import { auth, googleProvider } from './firebase'
-import { getPublicProducts, getPublicShop, getPublicShops, type Product, type Shop } from './api'
+import { apiAssetUrl, getPublicProducts, getPublicShop, getPublicShops, type Product, type Shop } from './api'
 import VendorPage from './VendorPage'
 import AdminPage from './AdminPage'
 
@@ -93,10 +93,10 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <div className="site-shell">
         <header className="topbar">
-          <Link className="wordmark" to="/" aria-label="e-CardMitra home"><span className="wordmark-mark"><img src="/ecardmitra-card.svg" width="21" height="21" alt="" /></span><span>e-CardMitra</span></Link>
+          <Link className="wordmark" to="/" aria-label="e-CardMitra home"><span className="wordmark-mark"><img src={`${import.meta.env.BASE_URL}ecardmitra-card.svg`} width="21" height="21" alt="" /></span><span>e-CardMitra</span></Link>
           <button className="mobile-menu icon-button" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={19} /> : <Menu size={19} />}</button>
           <nav className={`main-nav ${menuOpen ? 'is-open' : ''}`}><Link to="/" onClick={() => setMenuOpen(false)}>Explore</Link><Link to="/vendor" onClick={() => setMenuOpen(false)}>For shop owners</Link><Link to="/admin" onClick={() => setMenuOpen(false)}>Admin</Link></nav>
           <div className="topbar-actions">{user ? <button className="account-button" onClick={signOutUser}><span className="avatar">{user.displayName?.[0] ?? 'Y'}</span><span className="account-name">{user.displayName?.split(' ')[0] ?? 'Account'}</span><span className="sign-out-label">Sign out</span></button> : <button className="button button-dark button-small" onClick={signIn}>Sign in <ArrowUpRight size={15} /></button>}</div>
@@ -109,7 +109,7 @@ function App() {
           <Route path="/admin" element={<AdminPage user={user} authReady={authReady} onSignIn={signIn} />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <footer className="footer"><Link className="wordmark footer-mark" to="/"><span className="wordmark-mark"><img src="/ecardmitra-card.svg" width="19" height="19" alt="" /></span><span>e-CardMitra</span></Link><small className="footer-copyright" style={{ fontSize: 'inherit' }}>© 2026 e-CardMitra. All Rights Reserved.</small><div><Link to="/vendor">List your shop <ArrowUpRight size={14} /></Link><span className="footer-free">Free, always</span></div></footer>
+        <footer className="footer"><Link className="wordmark footer-mark" to="/"><span className="wordmark-mark"><img src={`${import.meta.env.BASE_URL}ecardmitra-card.svg`} width="19" height="19" alt="" /></span><span>e-CardMitra</span></Link><small className="footer-copyright" style={{ fontSize: 'inherit' }}>© 2026 e-CardMitra. All Rights Reserved.</small><div><Link to="/vendor">List your shop <ArrowUpRight size={14} /></Link><span className="footer-free">Free, always</span></div></footer>
       </div>
     </BrowserRouter>
   )
@@ -161,7 +161,7 @@ function DirectoryPage() {
 function ShopCard({ shop, index }: { shop: Shop; index: number }) {
   return (
     <article className={`shop-card accent-${shop.accent ?? ['citrus', 'sky', 'rose'][index % 3]}`} style={{ animationDelay: `${index * 70}ms` }}>
-      <Link className="shop-photo" to={`/shops/${shop.slug}`}>{shop.coverUrl ? <img src={shop.coverUrl} alt={`${shop.name} storefront or products`} loading="lazy" /> : <div className="photo-placeholder"><Store size={38} /></div>}{shop.logoUrl && <span className="shop-logo-mark"><img src={shop.logoUrl} alt={`${shop.name} logo`} loading="lazy" /></span>}<span className="photo-category">{shop.category}</span><span className="photo-arrow"><ArrowUpRight size={17} /></span></Link>
+      <Link className="shop-photo" to={`/shops/${shop.slug}`}>{shop.coverUrl ? <img src={apiAssetUrl(shop.coverUrl)} alt={`${shop.name} storefront or products`} loading="lazy" /> : <div className="photo-placeholder"><Store size={38} /></div>}{shop.logoUrl && <span className="shop-logo-mark"><img src={apiAssetUrl(shop.logoUrl)} alt={`${shop.name} logo`} loading="lazy" /></span>}<span className="photo-category">{shop.category}</span><span className="photo-arrow"><ArrowUpRight size={17} /></span></Link>
       <div className="shop-card-body"><div className="shop-title-line"><Link to={`/shops/${shop.slug}`} className="shop-name">{shop.name}</Link>{shop.approved && <BadgeCheck size={16} className="verified" aria-label="Verified listing" />}</div><p className="shop-description">{shop.description}</p><div className="shop-card-foot"><span><MapPin size={14} />{shop.city}</span><Link to={`/shops/${shop.slug}`} aria-label={`View ${shop.name}`}><ArrowRight size={16} /></Link></div></div>
     </article>
   )
@@ -219,13 +219,13 @@ function ShopPage() {
   return (
     <main className="shop-page">
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to the neighborhood</button>
-      <div className="shop-detail-hero">{shop.coverUrl ? <img src={shop.coverUrl} alt={`${shop.name} shop`} /> : <div className="photo-placeholder"><Store size={42} /></div>}{shop.logoUrl && <span className="shop-detail-logo"><img src={shop.logoUrl} alt={`${shop.name} logo`} /></span>}<span className="detail-category">{shop.category}</span></div>
+      <div className="shop-detail-hero">{shop.coverUrl ? <img src={apiAssetUrl(shop.coverUrl)} alt={`${shop.name} shop`} /> : <div className="photo-placeholder"><Store size={42} /></div>}{shop.logoUrl && <span className="shop-detail-logo"><img src={apiAssetUrl(shop.logoUrl)} alt={`${shop.name} logo`} /></span>}<span className="detail-category">{shop.category}</span></div>
       <div className="shop-detail-grid">
         <section className="shop-detail-main"><div className="eyebrow muted-eyebrow"><BadgeCheck size={15} className="verified" /> Independent local business</div><h1>{shop.name}<span className="orange-dot">.</span></h1>{shop.description && <p className="detail-description">{shop.description}</p>}<div className="detail-tags">{(shop.address || shop.city) && <span><MapPin size={15} />{[shop.address, shop.city].filter(Boolean).join(', ')}</span>}<span><Clock3 size={15} />Hours vary by day</span></div>
           <div className="contact-actions">{shop.phone && <><a className="button button-orange" href={`tel:${shop.phone}`}><Phone size={16} /> Call the shop</a><a className="button button-outline" href={`https://wa.me/${shop.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">WhatsApp <ArrowUpRight size={15} /></a></>}{shop.email && <a className="button button-outline" href={`mailto:${shop.email}`}><Mail size={15} /> Email</a>}{(shop.address || shop.city) && <a className="button button-outline" href={`https://maps.google.com/?q=${encodeURIComponent([shop.address, shop.city].filter(Boolean).join(', '))}`} target="_blank" rel="noreferrer"><MapPin size={15} /> Directions</a>}</div>
           {shop.website && <a className="website-link" href={shop.website} target="_blank" rel="noreferrer">Visit their website <ExternalLink size={14} /></a>}
           <a className="text-action save-contact" href={`data:text/vcard;charset=utf-8,${encodeURIComponent(`BEGIN:VCARD\nVERSION:3.0\nFN:${shop.name}\nTEL:${shop.phone ?? ''}\nEMAIL:${shop.email ?? ''}\nADR:;;${shop.address ?? ''};${shop.city ?? ''};;;;\nEND:VCARD`)}`} download={`${shop.slug}.vcf`}><ArrowDownRight size={15} /> Save contact card</a>
-          {(productsLoading || productsError || products.length > 0) && <section className="public-catalogue"><div className="eyebrow muted-eyebrow">From the catalogue</div>{productsLoading ? <p className="catalogue-note">Loading catalogue...</p> : productsError ? <p className="catalogue-note" role="alert">{productsError}</p> : <div className="public-product-list">{products.map((product) => <article key={product.id}>{product.imageUrl && <img src={product.imageUrl} alt="" loading="lazy" />}<div><strong>{product.name}</strong>{product.description && <p>{product.description}</p>}</div>{product.price != null && <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(product.price)}</span>}</article>)}</div>}</section>}
+          {(productsLoading || productsError || products.length > 0) && <section className="public-catalogue"><div className="eyebrow muted-eyebrow">From the catalogue</div>{productsLoading ? <p className="catalogue-note">Loading catalogue...</p> : productsError ? <p className="catalogue-note" role="alert">{productsError}</p> : <div className="public-product-list">{products.map((product) => <article key={product.id}>{product.imageUrl && <img src={apiAssetUrl(product.imageUrl)} alt="" loading="lazy" />}<div><strong>{product.name}</strong>{product.description && <p>{product.description}</p>}</div>{product.price != null && <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(product.price)}</span>}</article>)}</div>}</section>}
         </section>
         <aside className="share-panel"><div className="share-panel-head"><span className="eyebrow">Take us with you</span><button onClick={share} className="share-button" aria-label="Share visiting card">{copied ? <Check size={17} /> : <ArrowUpRight size={17} />}</button></div><div className="qr-wrap"><QRCodeSVG value={shopUrl} size={150} level="M" includeMargin fgColor="#17251f" /></div><p>Scan to open this shop's<br />digital visiting card.</p><button onClick={share} className="text-action">{copied ? 'Link copied' : 'Share this place'} <ArrowUpRight size={15} /></button></aside>
       </div>

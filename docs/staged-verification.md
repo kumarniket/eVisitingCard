@@ -4,9 +4,9 @@ Do not call an integration complete based only on compilation. Record project ID
 
 ## Stage 1: Local source checks
 
-- [x] React/TypeScript production build runs.
-- [x] Spring Boot compiles and unit tests run.
-- [x] Run and resolve `npm run lint` findings.
+- [x] React/TypeScript production build runs from `frontend/`.
+- [x] Spring Boot compiles and unit tests run from `backend/`.
+- [x] Run and resolve frontend lint findings from `frontend/`.
 - [x] Run the frontend at desktop and mobile widths; confirm directory filtering, direct shop link, QR rendering, and contact links.
 - [ ] Exercise the downloadable vCard in a browser and verify the downloaded contact fields.
 
@@ -36,8 +36,8 @@ Do not call an integration complete based only on compilation. Record project ID
 
 ## Stage 5: Release
 
-- [ ] Deploy API and frontend separately with HTTPS, exact CORS origins, secrets, health checks, logs, indexes, and rollback plan.
+- [ ] Deploy the frontend to GitHub Pages and the Docker API to Render using [deployment guide](deployment.md); verify HTTPS, exact CORS origins, secret files, health checks, logs, indexes, and rollback plan.
 - [ ] Run end-to-end checks on the deployed origins and confirm no private vendor data leaks from public endpoints.
 - [ ] Verify browser contact actions, map, vCard download, QR sharing, small-screen layout, keyboard navigation, and error/loading/empty states.
 
-Current workspace verification: frontend production build and backend unit tests pass. Real Firebase, Firestore, Drive, CORS, and deployed publication workflows remain unverified because project credentials and deployment targets have not been provided.
+Local build/test checkboxes above describe prior source checks only. The restructure and deployment configuration still require fresh validation; real Firebase, Firestore, Drive, CORS, and deployed workflows require project credentials and hosting configuration.

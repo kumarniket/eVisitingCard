@@ -9,6 +9,15 @@
     <title>e-CardMitra | Good things are closer</title>
   </head>
   <body>
+    <script>
+      const url = new URL(location.href)
+      const path = url.searchParams.get('__gh_pages_path')
+      if (path !== null) {
+        const search = url.searchParams.get('__gh_pages_search') || ''
+        const hash = url.searchParams.get('__gh_pages_hash') || ''
+        history.replaceState(null, '', `/eVisitingCard${path}${search}${hash}`)
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

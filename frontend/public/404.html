@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      const base = '/eVisitingCard'
+      const path = location.pathname.startsWith(base)
+        ? location.pathname.slice(base.length) || '/'
+        : '/'
+      const query = new URLSearchParams({
+        __gh_pages_path: path,
+        __gh_pages_search: location.search,
+        __gh_pages_hash: location.hash,
+      })
+      location.replace(`${base}/?${query}`)
+    </script>
+  </head>
+  <body></body>
+</html>

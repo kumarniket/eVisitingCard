@@ -4,8 +4,9 @@ e-CardMitra is a free, mobile-first directory for independent neighborhood busin
 
 ## Project layout
 
-- `src/`: React 19, TypeScript, Vite, Tailwind CSS, React Router, Firebase Google sign-in, QR rendering, and the API client.
+- `frontend/`: React 19, TypeScript, Vite, Tailwind CSS, React Router, Firebase Google sign-in, QR rendering, the API client, and the Dockerized static site.
 - `backend/`: Java 21 and Spring Boot REST API, Firebase Admin token verification, Firestore access, role enforcement, validation, OpenAPI, and Google Drive logo integration.
+- `.github/workflows/`: GitHub Pages deployment and GHCR/Render backend deployment workflows.
 - `firestore.rules`: denies all browser-side Firestore access. Spring uses the Admin SDK.
 - `firestore.indexes.json`: composite indexes for common directory and dashboard queries.
 - `docs/maintainer-guide.md`: folder map, change recipes, UI screenshots, debugging, and ownership boundaries.
@@ -46,7 +47,7 @@ The default Compose setup leaves Firebase disabled. To use the existing Firebase
    docker compose --env-file .env.local -f compose.yaml -f compose.firebase.yaml up --build
    ```
 
-   The overlay enables Firebase only for this run and mounts the ADC file read-only inside the backend container. It does not enable Google Drive. `--env-file .env.local` passes the frontend `VITE_FIREBASE_*` settings into the Docker build so browser sign-in is configured. Compose also sets the backend's `APP_CORS_ALLOWED_ORIGINS` to the local web origins, overriding any `app.cors.allowed-origins` value in the mounted local properties file. Keep using the same terminal for the command so Compose can read the backend credential environment variables too.
+   The overlay enables Firebase only for this run and mounts the ADC file read-only inside the backend container. It does not enable Google Drive. The root `.env.local` supplies frontend `VITE_FIREBASE_*` values to the Docker build. Compose sets the backend's `CORS_ALLOWED_ORIGINS` to local web origins. Keep using the same terminal for the command so Compose can read the backend credential environment variables too.
 4. Open `http://localhost:3000`. If Firestore is connected but has no published and approved shop documents, the directory should load with no live listings; an empty collection is not itself an error. Stop with `Ctrl+C`, then run `docker compose down`.
 
 If startup or API calls fail, inspect the backend output: server-side API exceptions now include the underlying exception and stack trace, while the response still contains only the safe public error message. Never paste credential files or access tokens into chat or commit them.
@@ -94,20 +95,20 @@ Prerequisites: Node.js 24.12+ (the installed Firebase SDK version requires it), 
 1. Install and start the frontend:
 
    ```powershell
-   npm install
-   Copy-Item .env.example .env.local
-   npm run dev
+   Copy-Item frontend/.env.example frontend/.env.local
+   npm --prefix frontend ci
+   npm --prefix frontend run dev
    ```
 
-2. Set only the `VITE_FIREBASE_*` values in `.env.local` from Firebase project settings. Enable Google as a Firebase Authentication provider and add `localhost` as an authorized domain. Without Firebase web configuration, the directory preview works and sign-in controls explain what is missing.
+2. Set `VITE_API_BASE_URL=http://localhost:8080` and only the `VITE_FIREBASE_*` values in `frontend/.env.local` from Firebase project settings. Enable Google as a Firebase Authentication provider and add `localhost` as an authorized domain. Without Firebase web configuration, the directory preview works and sign-in controls explain what is missing.
 
-3. Authenticate local Application Default Credentials once with `gcloud auth application-default login --impersonate-service-account=ecardmitra-local-backend@e-cardmitra.iam.gserviceaccount.com`. Enable the Google Drive API, grant that service account access to the logo folder, then replace `REPLACE_WITH_GOOGLE_DRIVE_FOLDER_ID` in the ignored local file `backend/application-local.properties` with the folder ID from its Drive URL. This file enables Firebase and Drive for local development and is not committed.
+3. Authenticate Firebase Application Default Credentials with `gcloud auth application-default login --impersonate-service-account=ecardmitra-local-backend@e-cardmitra.iam.gserviceaccount.com`. For Drive, follow the separate OAuth setup above to create the user ADC file and set `GOOGLE_DRIVE_CREDENTIALS`; the Google account used for OAuth needs Editor access to the folder. Set its ID in the ignored local file `backend/application-local.properties`. Never use Firebase service-account credentials as the personal Drive uploader.
 
    ```powershell
    mvn -f backend\pom.xml spring-boot:run
    ```
 
-   Set `VITE_API_BASE_URL=http://localhost:8080` in `.env.local`. Firebase and Google credentials are server-only; never put service-account JSON, OAuth secrets, or refresh tokens in the frontend environment. Logo uploads store a private Drive file ID and a single API proxy `logoUrl` string in Firestore; the Drive file itself does not need to be public.
+   Firebase and Google credentials are server-only; never put service-account JSON, OAuth secrets, or refresh tokens in the frontend environment. Logo uploads store a private Drive file ID and a single API proxy `logoUrl` string in Firestore; the Drive file itself does not need to be public.
 
 4. Open the API contract at `http://localhost:8080/swagger-ui.html` after the backend starts.
 
@@ -127,14 +128,14 @@ Only the verified `niket2work@gmail.com` Firebase Authentication account is elig
 ## Checks
 
 ```powershell
-npm run build
-npm run lint
+npm --prefix frontend run build
+npm --prefix frontend run lint
 mvn -f backend/pom.xml test
 ```
 
 ## Deploy
 
-Build the frontend with `npm run build` and deploy `dist/` to Firebase Hosting or another static host. `firebase.json` includes history fallback and cache headers. Deploy the Java service separately to a Java 21 HTTPS host, set the backend environment variables from [deployment notes](docs/deployment.md), then set the exact frontend origin in `CORS_ALLOWED_ORIGINS` and the API URL in `VITE_API_BASE_URL` before rebuilding the frontend.
+Follow the [deployment guide](docs/deployment.md) to deploy the frontend to GitHub Pages and the Dockerized API to Render. The guide covers workflows, Actions variables/secrets, Firebase, Drive OAuth, CORS, and release checks.
 
 Deploy `firestore.rules` and `firestore.indexes.json` with the Firebase CLI after confirming the project ID and target project. Keep service-account credentials in the backend host's secret manager or workload identity, not in source control.
 

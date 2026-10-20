@@ -1,0 +1,5 @@
+target
+application-local.properties
+google-*-adc.json
+*-service-account.json
+*.log

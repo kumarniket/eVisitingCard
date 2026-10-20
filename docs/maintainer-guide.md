@@ -16,30 +16,29 @@ The site can run without Firebase configuration using preview shop data. That mo
 
 ```text
 .
-|-- index.html                     Browser title, description, theme color, favicon reference
-|-- package.json                   Frontend scripts and dependencies
-|-- vite.config.ts                 Vite + Tailwind plugin
-|-- tsconfig*.json                 TypeScript compiler configuration
-|-- .env.example                   Frontend and backend variable-name template; no real secrets
-|-- firebase.json                  Hosting rewrites/cache headers + Firestore deploy file paths
-|-- firestore.rules                Deny all direct browser access
-|-- firestore.indexes.json         Composite Firestore indexes
-|-- src/
-|   |-- main.tsx                   React entry point; imports global stylesheet
-|   |-- App.tsx                    Router, shared header/footer, public directory and visiting card
-|   |-- VendorPage.tsx             Vendor registration, shop editor, catalogue, share link
-|   |-- AdminPage.tsx              Vendor/shop review, publish, Drive logo assignment/removal
-|   |-- api.ts                     Typed REST calls, Firebase bearer token, shared data types
-|   |-- firebase.ts                Firebase web app + Google Auth initialization
-|   |-- index.css                  Design tokens, Tailwind import, all page styles/responsive rules
-|   |-- App.css                    Unused generated starter stylesheet; active pages use index.css
-|   `-- assets/                    Unused Vite/React starter art; current UI photos are remote URLs
-|-- public/
-|   |-- ecardmitra-card.svg        Shared e-card brand mark for header, footer, and browser tab
-|   |-- favicon.svg                Legacy icon asset; no longer referenced
-|   `-- icons.svg                  Generated starter icon sprite; not referenced by current pages
+|-- frontend/
+|   |-- index.html                 Browser title, description, theme color, favicon reference
+|   |-- package.json               Frontend scripts and dependencies
+|   |-- vite.config.ts             Vite + Tailwind plugin and API dev proxy
+|   |-- tsconfig*.json             TypeScript compiler configuration
+|   |-- .env.example               Frontend variable-name template; no real secrets
+|   |-- Dockerfile                 Frontend container build
+|   |-- nginx.conf                 Static hosting and API proxy
+|   |-- src/
+|   |   |-- main.tsx               React entry point; imports global stylesheet
+|   |   |-- App.tsx                Router, shared header/footer, public directory and visiting card
+|   |   |-- VendorPage.tsx         Vendor registration, shop editor, catalogue, share link
+|   |   |-- AdminPage.tsx          Vendor/shop review, publish, Drive logo assignment/removal
+|   |   |-- api.ts                 Typed REST calls, Firebase bearer token, shared data types
+|   |   |-- firebase.ts            Firebase web app + Google Auth initialization
+|   |   `-- index.css              Design tokens and page styles
+|   |-- public/
+|   |   |-- 404.html               GitHub Pages SPA route fallback
+|   |   `-- ecardmitra-card.svg    Shared e-card brand mark
+|   `-- dist/                      Generated Vite output; never edit by hand
 |-- backend/
 |   |-- pom.xml                    Java dependencies and build plugins
+|   |-- Dockerfile                 Backend container build
 |   `-- src/
 |       |-- main/java/com/krniket/platform/
 |       |   |-- ECardMitraApplication.java   Spring Boot entry point
@@ -51,15 +50,22 @@ The site can run without Firebase configuration using preview shop data. That mo
 |       |   `-- config/                       Firebase/Drive beans and OpenAPI setup
 |       |-- main/resources/application.yml    Port, integration flags, CORS, multipart, docs
 |       `-- test/java/.../PlatformServiceTest.java  Service rule tests with in-memory store fake
+|-- .github/workflows/
+|   |-- deploy-pages.yml            GitHub Pages build/deployment
+|   `-- deploy-render.yml           GHCR image build and Render deploy hook
+|-- .env.example                   Root Compose/backend variable-name template; no secrets
+|-- compose*.yaml                  Local frontend/backend and optional integration overlays
+|-- firebase.json                  Firebase Hosting output + Firestore deploy file paths
+|-- firestore.rules                Deny all direct browser access
+|-- firestore.indexes.json         Composite Firestore indexes
 |-- docs/
 |   |-- assets/                   Checked-in local UI screenshots
 |   |-- maintainer-guide.md       This source/change map
 |   |-- api-contract.md           REST methods, access, pagination, bodies
 |   |-- firestore-model.md        Collection fields and indexes
-|   |-- deployment.md             Firebase, Java host, CORS, Drive setup
+|   |-- deployment.md             GitHub Pages, Render, Firebase, CORS, Drive setup
 |   `-- staged-verification.md    Live acceptance checklist
-|-- dist/                         Generated Vite output; never edit by hand
-`-- node_modules/                 Generated dependencies; never edit by hand
+`-- node_modules/                 Generated dependencies; frontend dependencies live in frontend/node_modules
 ```
 
 ## Architecture
@@ -86,37 +92,37 @@ Controller methods validate transport/body and select a service operation. `Plat
 
 | Browser path | Owning file | Main behavior |
 | --- | --- | --- |
-| `/` | `src/App.tsx` | Search/filter public shops. Uses API data when available and sample listings otherwise. |
-| `/shops/:slug` | `src/App.tsx` | Public shop card, contact links, vCard download, QR/share, active products. |
-| `/vendor` | `src/VendorPage.tsx` | Sign in, register profile, create/edit shop, submit review, add/remove products. |
-| `/admin` | `src/AdminPage.tsx` | Claim-gated dashboard, approve/reject vendors, approve/publish shops, assign/remove logos. |
+| `/` | `frontend/src/App.tsx` | Search/filter public shops. Uses API data when available and sample listings otherwise. |
+| `/shops/:slug` | `frontend/src/App.tsx` | Public shop card, contact links, vCard download, QR/share, active products. |
+| `/vendor` | `frontend/src/VendorPage.tsx` | Sign in, register profile, create/edit shop, submit review, add/remove products. |
+| `/admin` | `frontend/src/AdminPage.tsx` | Claim-gated dashboard, approve/reject vendors, approve/publish shops, assign/remove logos. |
 
-`src/App.tsx` owns the route table and the sample preview records. Put shared navigation or footer changes there. Keep vendor/admin forms and dashboards in their dedicated page modules. Keep REST details in `src/api.ts`, not in button components.
+`frontend/src/App.tsx` owns the route table and the sample preview records. Put shared navigation or footer changes there. Keep vendor/admin forms and dashboards in their dedicated page modules. Keep REST details in `frontend/src/api.ts`, not in button components.
 
 ### Change Recipes
 
 | Change | Edit these locations |
 | --- | --- |
-| Website title/description/browser theme | `index.html` (`<title>`, description, theme-color). |
-| Header/footer brand text and e-card mark | Brand text and `wordmark` markup are in `src/App.tsx`; edit `public/ecardmitra-card.svg` to update the shared logo image. |
-| Browser tab icon | `index.html` references `public/ecardmitra-card.svg`, the same file used by the header and footer. |
-| Main colors/fonts/spacing/responsive layout | `src/index.css` CSS variables near the top, then the relevant component selectors/media query. Keep letter spacing at zero and check mobile width. |
-| Home hero / local preview shop photos | Change the `img` URL in the hero markup or a sample record's `coverUrl` in `src/App.tsx`. Use a licensed/owned image URL and keep a useful `alt` description. |
+| Website title/description/browser theme | `frontend/index.html` (`<title>`, description, theme-color). |
+| Header/footer brand text and e-card mark | Brand text and `wordmark` markup are in `frontend/src/App.tsx`; edit `frontend/public/ecardmitra-card.svg` to update the shared logo image. |
+| Browser tab icon | `frontend/index.html` references the shared brand asset in `frontend/public/`. |
+| Main colors/fonts/spacing/responsive layout | `frontend/src/index.css` CSS variables near the top, then the relevant component selectors/media query. Keep letter spacing at zero and check mobile width. |
+| Home hero / local preview shop photos | Change the `img` URL in the hero markup or a sample record's `coverUrl` in `frontend/src/App.tsx`. Use a licensed/owned image URL and keep a useful `alt` description. |
 | Real assigned shop logo | Do not edit the sample array or let a vendor set the URL. The admin uploads through `/admin/shops/{shopId}/logo`; Java stores a Drive ID and public API proxy URL. |
-| A public shop or card UI element | `src/App.tsx`; add data to `Shop` in `src/api.ts` if the API returns a new field. |
-| Category/filter option | Update `categories` in `src/App.tsx` and `src/VendorPage.tsx`; create/activate matching `categories/{categoryId}` data in Firestore for the public categories endpoint. Keep spellings identical. |
-| Vendor dashboard form or catalogue interaction | `src/VendorPage.tsx`; add/change request DTO and service support in Java too. |
-| Admin review/upload control | `src/AdminPage.tsx`; keep its REST path aligned with `PlatformController`. |
-| Frontend endpoint, auth header, JSON/multipart behavior | `src/api.ts`. It adds a Firebase ID token when signed in and intentionally leaves `FormData` content-type unset so the browser adds its boundary. |
+| A public shop or card UI element | `frontend/src/App.tsx`; add data to `Shop` in `frontend/src/api.ts` if the API returns a new field. |
+| Category/filter option | Update `categories` in `frontend/src/App.tsx` and `frontend/src/VendorPage.tsx`; create/activate matching `categories/{categoryId}` data in Firestore for the public categories endpoint. Keep spellings identical. |
+| Vendor dashboard form or catalogue interaction | `frontend/src/VendorPage.tsx`; add/change request DTO and service support in Java too. |
+| Admin review/upload control | `frontend/src/AdminPage.tsx`; keep its REST path aligned with `PlatformController`. |
+| Frontend endpoint, auth header, JSON/multipart behavior | `frontend/src/api.ts`. It adds a Firebase ID token when signed in and intentionally leaves `FormData` content-type unset so the browser adds its boundary. |
 | Add/change a REST endpoint | DTO in `api/ApiModels.java` if needed -> mapping/authorization in `api/PlatformController.java` -> business rule in `service/PlatformService.java` -> Firestore operation in `data/FirestoreStore.java`; add a test and update `docs/api-contract.md`. |
 | Change a Firestore field/collection/query | `PlatformService.java` and/or `FirestoreStore.java`, `docs/firestore-model.md`, and indexes in `firestore.indexes.json`; use Admin SDK only. |
 | Change a role or authorization rule | `security/FirebaseAuthenticationFilter.java`, `security/SecurityConfiguration.java`, and `@PreAuthorize` on controller methods; update security tests/checklist. Never accept a role from the browser. |
 | Change shop approval/publication | `PlatformService.java` state checks and admin endpoints in `PlatformController.java`; update the workflow section/checklist and test prohibited transitions. |
 | Change Drive logo handling/limits/proxy | `integration/DriveLogoService.java`, admin/public controller routes, shop logo fields in Firestore docs, and [deployment notes](deployment.md). Never give vendors logo fields in their patch DTO. |
 | Change API host, CORS, Firebase/Drive flags, upload size | Environment variable in `.env.example` + `backend/src/main/resources/application.yml` + deployment guide. Set real secrets only in local ignored `.env.local` (web config) or the backend host secret store. |
-| Add frontend dependency or command | `package.json`, then run `npm install` so `package-lock.json` stays in sync. |
+| Add frontend dependency or command | `frontend/package.json`, then run `npm install` from `frontend/` so `frontend/package-lock.json` stays in sync. |
 
-**Branding:** “e-CardMitra” is live text in the header/footer. The e-card mark is the shared image asset at `public/ecardmitra-card.svg`, used in the header, footer, and browser tab.
+**Branding:** “e-CardMitra” is live text in the header/footer. The e-card mark is the shared image asset at `frontend/public/ecardmitra-card.svg`, used in the header, footer, and browser tab.
 
 The shop-card `coverUrl` is an optional public image field. When it is missing but a logo is uploaded by the shop owner or assigned by an admin, `PlatformService.publicFields()` maps that `logoUrl` to `coverUrl` for card display. The shop document keeps one `logoUrl` string and a private Drive `logoFileId`; it does not store a URL array or a public Drive link. Both vendor and admin logo upload require `DRIVE_ENABLED=true`, a configured `DRIVE_LOGO_FOLDER_ID`, and backend credentials with access to that folder. Sample `coverUrl` values are only local preview content; vendor product-image upload is not available.
 
@@ -126,9 +132,9 @@ The shop-card `coverUrl` is an optional public image field. When it is missing b
 2. Add the endpoint in `PlatformController.java`, choose the right `@PreAuthorize` role, and return the appropriate status code.
 3. Implement ownership, validation, and workflow/state transitions in `PlatformService.java`.
 4. Add Firestore reads/writes to `FirestoreStore.java`; do not instantiate Firestore clients in controllers.
-5. Call it from `src/api.ts`, then connect the helper to the relevant React page.
+5. Call it from `frontend/src/api.ts`, then connect the helper to the relevant React page.
 6. Update `docs/api-contract.md`, `docs/firestore-model.md` if the schema changes, and deployment/index notes where needed.
-7. Add a focused service/controller test and run `npm run build`, `npm run lint`, and `mvn -f backend/pom.xml test`.
+7. Add a focused service/controller test and run the frontend checks from `frontend/`, plus `mvn -f backend/pom.xml test` from the repository root.
 
 For the current complete method/path/access/status list, see [API contract](api-contract.md). Springdoc generates the live OpenAPI document at `/v3/api-docs` and Swagger UI at `/swagger-ui.html` when the backend is configured and running.
 
@@ -148,20 +154,23 @@ For the current complete method/path/access/status list, see [API contract](api-
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | Vite/browser | Root URL for the Spring API (default `http://localhost:8080`). |
+| `VITE_BASE_PATH` | Vite/browser | Deployment path prefix; GitHub Pages uses `/eVisitingCard/`, Docker/local development use `/`. |
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Browser Firebase Auth | Public Firebase web-app configuration; all four must be set to initialize Auth. |
 | `PORT` | Spring Boot | API port, default `8080`. |
 | `FIREBASE_ENABLED` | Spring config | Creates Firebase Admin, Auth, and Firestore beans when `true`. |
 | `GOOGLE_CLOUD_PROJECT` | Spring Firebase Admin | Sets the Firebase project used by the backend. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Google SDK ADC | Server-side service-account path locally; prefer workload identity/secret manager in production. |
-| `DRIVE_ENABLED`, `DRIVE_LOGO_FOLDER_ID` | Spring Drive integration | Enables Drive client and selects the administrator-owned folder. |
+| `DRIVE_ENABLED`, `GOOGLE_DRIVE_CREDENTIALS`, `DRIVE_LOGO_FOLDER_ID` | Spring Drive integration | Enables Drive client, loads the authorized administrator's user ADC, and selects the logo folder. |
 | `CORS_ALLOWED_ORIGINS` | Spring Security | Comma-separated exact frontend origins; no wildcard by default. |
 | `PUBLIC_BASE_URL` | Drive logo service | Public HTTPS API origin used when saving proxy logo URLs. |
 
 Quick checks:
 
 ```powershell
+Set-Location frontend
 npm run build
 npm run lint
+Set-Location ..
 mvn -f backend/pom.xml test
 ```
 
